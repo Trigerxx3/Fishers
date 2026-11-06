@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production builds
+dist/
+client/dist/
+
+# Environment variables
+.env
+server/.env
+.env.local
+.env.production
+
+# Vercel deployment folder
+.vercel/
+
+# Cache & logs
+.vite/
+.vite-temp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
