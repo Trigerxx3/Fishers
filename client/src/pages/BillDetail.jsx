@@ -58,11 +58,16 @@ export default function BillDetail() {
               <span>Edit</span>
             </button>
           )}
-          <button className="btn btn-secondary btn-icon-text" onClick={() => window.open(`/bills/${id}/print`, '_blank')}>
+          <button className="btn btn-secondary btn-icon-text" onClick={() => {
+            const win = window.open(`/bills/${id}/print`, '_blank');
+            if (!win || win.closed || typeof win.closed === 'undefined') {
+              navigate(`/bills/${id}/print`);
+            }
+          }}>
             <Printer size={14} />
             <span>Print Memo</span>
           </button>
-          <button className="btn btn-primary btn-icon-text" onClick={() => window.open(`/bills/${id}/invoice`, '_blank')}>
+          <button className="btn btn-primary btn-icon-text" onClick={() => navigate(`/bills/${id}/invoice`)}>
             <FileText size={14} />
             <span>View Invoice</span>
           </button>

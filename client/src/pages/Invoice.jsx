@@ -1,22 +1,65 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { formatDate, formatCurrency } from '../utils';
 
 export default function Invoice() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get(`/bills/${id}`).then(res => {
-      setData(res.data);
-      setTimeout(() => window.print(), 800);
-    });
+    setLoading(true);
+    api.get(`/bills/${id}`)
+      .then(res => {
+        setData(res.data);
+        setError(null);
+      })
+      .catch(err => {
+        console.error('Failed to load invoice:', err);
+        setError(err.response?.data?.error || 'Unable to load invoice. Please verify your connection or login.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [id]);
 
-  if (!data) return <div style={{ padding: 40, textAlign: 'center' }}>Loading invoice...</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: 60, textAlign: 'center', fontFamily: 'Plus Jakarta Sans, sans-serif', color: '#64748b' }}>
+        <div style={{ fontSize: 24, marginBottom: 12 }}>🐟</div>
+        <p style={{ fontWeight: 600 }}>Loading invoice...</p>
+      </div>
+    );
+  }
 
-  const { bill, items, settings } = data;
+  if (error || !data?.bill) {
+    return (
+      <div style={{ padding: 40, maxWidth: 480, margin: '60px auto', textAlign: 'center', background: '#fff', borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+        <h3 style={{ fontSize: 18, color: '#0f172a', marginBottom: 8 }}>Invoice Not Found</h3>
+        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>{error || 'Could not find the requested bill.'}</p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ padding: '8px 18px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+          >
+            ← Go Back
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ padding: '8px 18px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { bill, items = [], settings = {} } = data;
 
   return (
     <>
@@ -30,24 +73,31 @@ export default function Invoice() {
           .invoice { box-shadow: none !important; padding: 0 !important; }
         }
         @media screen {
-          body { padding: 32px 16px; background: #0f172a; }
-          .invoice-wrapper { max-width: 760px; margin: 0 auto; }
+          body { padding: 24px 12px; background: #0f172a; }
+          .invoice-wrapper { max-width: 760px; margin: 0 auto; width: 100%; }
         }
-        .invoice { background: white; padding: 42px 48px; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.35); position: relative; }
+        .invoice { background: white; padding: 32px 36px; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.35); position: relative; }
+        @media (max-width: 640px) {
+          .invoice { padding: 20px 16px; }
+          .parties-row { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .inv-header { flex-direction: column !important; gap: 16px !important; }
+          .inv-meta { text-align: left !important; }
+        }
         .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; border-bottom: 2px solid #0284c7; padding-bottom: 22px; }
         .inv-logo-badge { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
         .inv-fish-icon { font-size: 26px; }
-        .inv-logo { font-size: 26px; font-weight: 800; color: #0284c7; letter-spacing: -0.5px; }
+        .inv-logo { font-size: 24px; font-weight: 800; color: #0284c7; letter-spacing: -0.5px; }
         .inv-addr { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.6; }
         .inv-meta { text-align: right; }
-        .inv-title { font-size: 26px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; }
+        .inv-title { font-size: 24px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; }
         .inv-num { font-size: 12.5px; color: #475569; margin-top: 6px; line-height: 1.6; }
         .parties-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
         .party-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }
         .party-box h4 { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #0284c7; margin-bottom: 6px; }
         .party-box .name { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
         .party-box p { font-size: 12px; color: #64748b; line-height: 1.5; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        .table-responsive { width: 100%; overflow-x: auto; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; min-width: 480px; }
         thead th { background: #0284c7; color: white; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
         thead th:first-child { border-top-left-radius: 6px; }
         thead th:last-child { text-align: right; border-top-right-radius: 6px; }
@@ -55,7 +105,7 @@ export default function Invoice() {
         tbody td { padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 12.5px; }
         tbody td:nth-child(2), tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5) { text-align: right; font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
         .totals { display: flex; justify-content: flex-end; }
-        .totals-box { width: 300px; }
+        .totals-box { width: 320px; max-width: 100%; }
         .total-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid #edf2f7; }
         .total-row.highlight { font-weight: 800; font-size: 15px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 10px 14px; margin: 10px 0; border-radius: 6px; border-bottom: none; }
         .total-row.section { background: #f8fafc; padding: 7px 10px; font-weight: 600; margin: 4px 0; border-bottom: none; border-radius: 4px; }
@@ -63,11 +113,24 @@ export default function Invoice() {
         .sig-line { width: 160px; border-top: 1px solid #475569; margin-top: 40px; text-align: center; font-size: 11px; padding-top: 5px; color: #475569; }
       `}</style>
 
-      <div className="no-print" style={{ textAlign: 'center', padding: '14px', background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', justifyContent: 'center', gap: 10 }}>
-        <button onClick={() => window.print()} style={{ padding: '8px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#0284c7', color: 'white', border: 'none', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)' }}>
+      {/* Floating Action Bar */}
+      <div className="no-print" style={{ textAlign: 'center', padding: '12px 16px', background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6 }}
+        >
+          ← Back
+        </button>
+        <button
+          onClick={() => window.print()}
+          style={{ padding: '8px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#0284c7', color: 'white', border: 'none', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)' }}
+        >
           🖨️ Print Invoice
         </button>
-        <button onClick={() => window.close()} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6 }}>
+        <button
+          onClick={() => window.close()}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'rgba(255,255,255,0.08)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6 }}
+        >
           ✕ Close
         </button>
       </div>
@@ -92,7 +155,7 @@ export default function Invoice() {
             <div className="inv-meta">
               <div className="inv-title">Invoice</div>
               <div className="inv-num">
-                <div><strong>Invoice No:</strong> {bill.invoice_number}</div>
+                <div><strong>Invoice No:</strong> {bill.invoice_number || `INV-${bill.bill_number}`}</div>
                 <div><strong>Bill No:</strong> {bill.bill_number}</div>
                 <div><strong>Date:</strong> {formatDate(bill.bill_date)}</div>
               </div>
@@ -116,28 +179,30 @@ export default function Invoice() {
           </div>
 
           {/* Items */}
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Box</th>
-                <th>Qty</th>
-                <th>Rate (₹)</th>
-                <th>Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.item_name}</td>
-                  <td style={{ textAlign: 'right' }}>{item.box}</td>
-                  <td style={{ textAlign: 'right' }}>{item.quantity || 0}</td>
-                  <td style={{ textAlign: 'right' }}>{parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ textAlign: 'right' }}>{parseFloat(item.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          <div className="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Box</th>
+                  <th>Qty</th>
+                  <th>Rate (₹)</th>
+                  <th>Amount (₹)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.item_name}</td>
+                    <td style={{ textAlign: 'right' }}>{item.box || 0}</td>
+                    <td style={{ textAlign: 'right' }}>{item.quantity || 0}</td>
+                    <td style={{ textAlign: 'right' }}>{parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td style={{ textAlign: 'right' }}>{parseFloat(item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Totals */}
           <div className="totals">

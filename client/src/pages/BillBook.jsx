@@ -228,7 +228,12 @@ export default function BillBook() {
                               </button>
                               <button
                                 className="btn-action-icon btn-action-accent"
-                                onClick={() => window.open(`/bills/${bill.id}/print`, '_blank')}
+                                onClick={() => {
+                                  const win = window.open(`/bills/${bill.id}/print`, '_blank');
+                                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                                    navigate(`/bills/${bill.id}/print`);
+                                  }
+                                }}
                                 title="Print Memo"
                               >
                                 <Printer size={13} />
